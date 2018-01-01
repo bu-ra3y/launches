@@ -1,6 +1,9 @@
+import argparse
 from pprint import pprint
 
 import sys
+from typing import List, NewType, Tuple, Iterable
+
 import urllib3
 from bs4 import BeautifulSoup
 
@@ -8,49 +11,74 @@ from bs4 import BeautifulSoup
 urllib3.disable_warnings()
 
 month = dict(
-    January = 'Jan',
-    February = 'Feb',
-    March = 'Mar',
-    April = 'Apr',
-    May = 'May',
-    June = 'Jun',
-    July = 'Jul',
-    August = 'Aug',
-    September = 'Sep',
-    October = 'Oct',
-    November = 'Nov',
-    December = 'Dec',
+    January='Jan',
+    February='Feb',
+    March='Mar',
+    April='Apr',
+    May='May',
+    June='Jun',
+    July='Jul',
+    August='Aug',
+    September='Sep',
+    October='Oct',
+    November='Nov',
+    December='Dec',
 )
 
-
-def print_missions(missions):
-    space_for_date = 3 + max_length(d for d, n in missions)
-    template = "{: <"+ str(space_for_date) +"} {}"
-
-    for date, name in missions:
-        print_mission(template, date, name)
-
-def print_mission(template, date, name):
-    print(template.format(date, name))
+Launch_Name = NewType('Launch_Name', str)
+Launch_Date = NewType('Launch_Date', str)
+Launch = NewType('Launch', Tuple[Launch_Date, Launch_Name])
 
 
-def max_length(items):
-    return max(len(i) for i in items)
-
-def upcoming_launches():
+def launches() -> Iterable[Launch]:
     url = 'http://spaceflightnow.com/launch-schedule/'
     http = urllib3.PoolManager()
     response = http.request('GET', url)
     soup = BeautifulSoup(response.data, 'lxml')
     missions = soup.findAll('div', attrs={'class': 'datename'})
-    spacex_missions = [(list(m.children)[0].text, list(m.children)[1].text) for m in missions if 'Falcon' in list(m.children)[1].text]
-    clean = [(d.replace("NET ", "").replace(".", ""), n) for d, n in spacex_missions]
+    spacex_missions = [(list(m.children)[0].text, list(m.children)[1].text) for m in missions]
+    clean = [(d.replace("NET ", "").replace(".", ""), n.replace(u' \u2022', ":")) for d, n in spacex_missions]
     return clean
 
 
-def print_upcoming_launches():
-    print_missions(upcoming_launches())
+def max_length(items):
+    return max(len(i) for i in items)
+
+
+def next_launch(rocket: str = None) -> Launch:
+    for date, name in launches():
+        if rocket: # Are we filtering on rocket name?
+            if rocket in name:
+                return (date, name)
+        else: # no filter
+            return (date, name)
+
+
+def print_next_launch_for_rocket(rocket: str) -> None:
+    print_launch_date(launch=next_launch(rocket=rocket), prefix=rocket + ": ")
+
+
+def print_launch_date(launch: Launch, prefix: str = ""):
+    date, name = launch
+    print("{}{}".format(prefix, date))
+
+
+def print_launches():
+    space_for_date = 3 + max_length(d for d, n in launches())
+    template = "{: <" + str(space_for_date) + "} {}"
+
+    for date, name in launches():
+        print(template.format(date, name))
+
 
 def print_next_launch_date():
-    next = upcoming_launches()[0][0]
-    print("SpaceX: " + next)
+    print_launch_date(launch=next_launch())
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Find out about upcoming rocket launches.')
+    parser.add_argument('--rocket', help='Get next launch for the specified rocket.')
+    args = vars(parser.parse_args())
+    if args['rocket']:
+        print_next_launch_for_rocket(rocket=args['rocket'])
+    else:
+        print_launches()
