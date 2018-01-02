@@ -54,8 +54,19 @@ def next_launch(rocket: str = None) -> Launch:
             return (date, name)
 
 
-def print_next_launch_for_rocket(rocket: str) -> None:
-    print_launch_date(launch=next_launch(rocket=rocket), prefix=rocket + ": ")
+def print_next_launch_for_rocket(rocket: str, alias: str = None) -> None:
+    """
+    Print a string indicating the next launch for the given rocket.
+
+    :param rocket: If this string is contained in the mission name, we match.
+    :param alias: When printing results, this alias will be used instead of the rocket name, if supplied.
+    """
+    if alias:
+        prefix = alias
+    else:
+        prefix = rocket
+
+    print_launch_date(launch=next_launch(rocket=rocket), prefix=prefix + ": ")
 
 
 def print_launch_date(launch: Launch, prefix: str = ""):
@@ -77,8 +88,11 @@ def print_next_launch_date():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Find out about upcoming rocket launches.')
     parser.add_argument('--rocket', help='Get next launch for the specified rocket.')
+    parser.add_argument('--alias', help='Use this name for the rocket when printing results.')
+
     args = vars(parser.parse_args())
+
     if args['rocket']:
-        print_next_launch_for_rocket(rocket=args['rocket'])
+        print_next_launch_for_rocket(rocket=args['rocket'], alias=args['alias'])
     else:
         print_launches()
