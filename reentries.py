@@ -2,6 +2,7 @@ import re
 import sys
 from pathlib import Path
 
+import PyQt4
 from PyQt4.QtCore import QUrl
 from PyQt4.QtGui import QApplication
 from PyQt4.QtWebKit import QWebPage
@@ -14,13 +15,17 @@ You can have this display on your Macbook Pro Touchbar using BetterTouchTool > T
  
  Either use "Run Applescript" with code like:
 
-    return do shell script "/Users/will/miniconda3/envs/ROCKETS/bin/python 
+    return do shell script "/Users/will/miniconda3/envs/ROCKETS/bin/python -W ignore
     /Users/will/PycharmProjects/rockets/reentries.py" 
 
  Or use "Shell script" with code like:
-    /bin/bash -c /Users/will/miniconda3/envs/ROCKETS/bin/python /Users/will/PycharmProjects/rockets/reentries.py
+    /bin/bash -c /Users/will/miniconda3/envs/ROCKETS/bin/python -W ignore /Users/will/PycharmProjects/rockets/reentries.py
+
+ Note the '-W ignore' option to Python so that it doesn't report errors on STDERR
 
 """
+
+
 
 this_file:Path = Path(__file__)
 data_file:Path = (this_file.parent / "data" / this_file.name).with_suffix('.txt')
@@ -34,9 +39,9 @@ def persist_answer(string: str):
 
 def recall_answer():
     try:
-        return data_file.read_text()
+        return f"{data_file.read_text()}*"
     except FileNotFoundError:
-        return "TTIANGONG 1: ?"
+        return "TIANGONG 1: ?"
 
 class Client(QWebPage):
     """
@@ -57,32 +62,26 @@ class Client(QWebPage):
         self.app.quit()
 
 
-url = 'http://www.satview.org/?sat_id=37820U'
-client_response = Client(url=url)
-source = client_response.mainFrame().toHtml()
 
-soup = BeautifulSoup(source, 'lxml')
-
-# string is like: TIANGONG 1 - Time to Reenter: 52d 0h 36m 21s
 try:
-    reentry_string = soup.find_all('div', attrs={'id': 'main_track'})[0].find_all('div', attrs={'id': 'infobar'})[0]\
-        .findChild('b').text
-except IndexError:
-    print(f"{recall_answer()}*")
+    url = 'http://www.satview.org/?sat_id=37820U'
+    client_response = Client(url=url)
+    source = client_response.mainFrame().toHtml()
+    soup = BeautifulSoup(source, 'lxml')
+    # string is like: TIANGONG 1 - Time to Reenter: 52d 0h 36m 21s
+    reentry_string = \
+        soup.find_all('div', attrs={'id': 'main_track'})[0]\
+            .find_all('div', attrs={'id': 'infobar'})[0].findChild('b').text
+except:
+    print(f"{recall_answer()}")
 else:
     match = re.compile("^(?P<debris>.*) - Time to Reenter: (?P<time>.*)$").search(reentry_string)
     debris = match.groupdict()['debris']
     time_string = match.groupdict()['time']
-
-    # print(f"{debris} will land in {time_string}")
-
     time_match = re.compile("^(?P<days>\d+)d (?P<hours>\d+)h (?P<minutes>\d+)m (?P<seconds>\d+)s$").search(time_string)
-    # print(time_match.groupdict())
     days = time_match.groupdict()['days']
     hours = time_match.groupdict()['hours']
-
     report = f"{debris}: {days}d:{hours}h"
-
     persist_answer(string=report)
     print(report)
 
