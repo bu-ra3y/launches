@@ -2,6 +2,9 @@
   <dictionary name="will">
     <words>
       <w>datename</w>
+      <w>envs</w>
+      <w>infobar</w>
+      <w>miniconda</w>
     </words>
   </dictionary>
 </component>
