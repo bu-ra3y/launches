@@ -1,11 +1,18 @@
 import argparse
-from pprint import pprint
-
-import sys
-from typing import List, NewType, Tuple, Iterable
+from typing import NewType, Tuple, Iterable
 
 import urllib3
 from bs4 import BeautifulSoup
+
+"""
+This module contains code to bring back info about rocket launches. 
+
+You can have this display on your Macbook Pro Touchbar using BetterTouchTool > TouchBar > Add Widget > Run Applescript > code like this:
+
+    return do shell script "/Users/will/miniconda3/envs/TEST/bin/python /Users/will/PycharmProjects/launches/launches.py --rocket 'Falcon 9' --alias 'F9'"
+
+"""
+
 
 # to suppress the warning: InsecureRequestWarning: Unverified HTTPS request is being made. Adding certificate verification is strongly advised
 urllib3.disable_warnings()
