@@ -9,4 +9,6 @@
 .idea/shelf/
 __pycache__/
 .idea/.name
-a.html
+
+# Transient Data
+/data/reentries.txt

@@ -1,5 +1,6 @@
 import re
 import sys
+from pathlib import Path
 
 from PyQt4.QtCore import QUrl
 from PyQt4.QtGui import QApplication
@@ -21,6 +22,21 @@ You can have this display on your Macbook Pro Touchbar using BetterTouchTool > T
 
 """
 
+this_file:Path = Path(__file__)
+data_file:Path = (this_file.parent / "data" / this_file.name).with_suffix('.txt')
+
+
+def persist_answer(string: str):
+    data_file.parent.mkdir(exist_ok=True, parents=True) # make sure the directory exists
+    if data_file.exists():
+        data_file.unlink() # first remove the data file
+    data_file.write_text(string)
+
+def recall_answer():
+    try:
+        return data_file.read_text()
+    except FileNotFoundError:
+        return "TTIANGONG 1: ?"
 
 class Client(QWebPage):
     """
@@ -48,17 +64,25 @@ source = client_response.mainFrame().toHtml()
 soup = BeautifulSoup(source, 'lxml')
 
 # string is like: TIANGONG 1 - Time to Reenter: 52d 0h 36m 21s
-reentry_string = soup.find_all('div', attrs={'id': 'main_track'})[0].find_all('div', attrs={'id': 'infobar'})[0]\
-    .findChild('b').text
-match = re.compile("^(?P<object>.*) - Time to Reenter: (?P<time>.*)$").search(reentry_string)
-debris = match.groupdict()['object']
-time_string = match.groupdict()['time']
+try:
+    reentry_string = soup.find_all('div', attrs={'id': 'main_track'})[0].find_all('div', attrs={'id': 'infobar'})[0]\
+        .findChild('b').text
+except IndexError:
+    print(f"{recall_answer()}*")
+else:
+    match = re.compile("^(?P<debris>.*) - Time to Reenter: (?P<time>.*)$").search(reentry_string)
+    debris = match.groupdict()['debris']
+    time_string = match.groupdict()['time']
 
-# print(f"{object} will land in {time_string}")
+    # print(f"{debris} will land in {time_string}")
 
-time_match = re.compile("^(?P<days>\d+)d (?P<hours>\d+)h (?P<minutes>\d+)m (?P<seconds>\d+)s$").search(time_string)
-# print(time_match.groupdict())
-days = time_match.groupdict()['days']
-hours = time_match.groupdict()['hours']
+    time_match = re.compile("^(?P<days>\d+)d (?P<hours>\d+)h (?P<minutes>\d+)m (?P<seconds>\d+)s$").search(time_string)
+    # print(time_match.groupdict())
+    days = time_match.groupdict()['days']
+    hours = time_match.groupdict()['hours']
 
-print(f"{object}: {days}d:{hours}h")
+    report = f"{debris}: {days}d:{hours}h"
+
+    persist_answer(string=report)
+    print(report)
+
