@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 import PyQt4
-from PyQt4.QtCore import QUrl
+from PyQt4.QtCore import QUrl, QTimer
 from PyQt4.QtGui import QApplication
 from PyQt4.QtWebKit import QWebPage
 from bs4 import BeautifulSoup
@@ -25,7 +25,7 @@ You can have this display on your Macbook Pro Touchbar using BetterTouchTool > T
 
 """
 
-
+DEBUGGING = False
 
 this_file:Path = Path(__file__)
 data_file:Path = (this_file.parent / "data" / this_file.name).with_suffix('.txt')
@@ -55,11 +55,32 @@ class Client(QWebPage):
         QWebPage.__init__(self)
         # noinspection PyUnresolvedReferences
         self.loadFinished.connect(self.on_page_load)
+        self._error = None
+
+
+        # Setup timeout
+        timeout_value = 10 # seconds
+        self.timeout_timer = QTimer()
+        self.timeout_timer.timeout.connect(self._request_timed_out)
+        self.timeout_timer.start(timeout_value * 1000)  # Start the timer
+
+        # load the page, timer running
         self.mainFrame().load(QUrl(url))
         self.app.exec_()
 
-    def on_page_load(self):
+    def on_page_load(self, ok):
+        """
+        :param ok: whether we exited with an OK status
+        """
         self.app.quit()
+
+    def _request_timed_out(self):
+        if DEBUGGING:
+            print("timed out")
+        self._error = 'Custom request timeout value exceeded.'
+        self.timeout_timer.stop() # stop timer
+        self.app.quit()
+        raise RuntimeError("Timed out when pulling data from web.")
 
 
 
@@ -72,9 +93,6 @@ try:
     reentry_string = \
         soup.find_all('div', attrs={'id': 'main_track'})[0]\
             .find_all('div', attrs={'id': 'infobar'})[0].findChild('b').text
-except:
-    print(f"{recall_answer()}")
-else:
     match = re.compile("^(?P<debris>.*) - Time to Reenter: (?P<time>.*)$").search(reentry_string)
     debris = match.groupdict()['debris']
     time_string = match.groupdict()['time']
@@ -83,5 +101,11 @@ else:
     hours = time_match.groupdict()['hours']
     report = f"{debris}: {days}d:{hours}h"
     persist_answer(string=report)
+
+except Exception as e:
+    if DEBUGGING:
+        print(e)
+    print(f"{recall_answer()}")
+else:
     print(report)
 
