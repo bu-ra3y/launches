@@ -38,6 +38,10 @@ def persist_answer(string: str):
     data_file.write_text(string)
 
 def recall_answer():
+    """
+    :return: the stored answer, with a * at the end to indicate this is a cached answer.
+        If there is a problem getting to the storage location, return a ? for the time
+    """
     try:
         return f"{data_file.read_text()}*"
     except FileNotFoundError:
